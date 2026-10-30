@@ -1,0 +1,14 @@
+# generated, reproducible from fixed seeds
+data/
+runs/
+workspaces/
+blind/
+c12_batch/
+report.json
+report.md
+# secrets / caches
+.secret
+__pycache__/
+*.pyc
+.DS_Store
+/Design spec*.docx

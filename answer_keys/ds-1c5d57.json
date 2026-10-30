@@ -1,0 +1,30 @@
+{
+ "alert": "PagerDuty: p95 latency alert on document-processing, 14s at 02:10 UTC.",
+ "artifact_patterns": [
+  "metric|telemetry|monitor|exporter|measurement|scrape|glitch|artifact|false (alarm|positive)|no incident"
+ ],
+ "benign_lines": 50000,
+ "causes": [],
+ "dataset_id": "ds-1c5d57",
+ "decoy_patterns": [],
+ "expect": {
+  "no_incident": true
+ },
+ "incident": "inc07",
+ "kind": "incident",
+ "manifest_sha256": "3843b231054aa1d27cf574513e70ee80ea288e9a8f7388f18a5c6233b738b00b",
+ "metrics_empty_after": null,
+ "name": "inc07",
+ "root_cause": "No incident. The 02:10-02:12 p95 spike is a telemetry artifact: the monitoring-agent exporter timed out (02:07), buffered points and re-flushed them with rewritten timestamps after reconnecting (02:13). Request rate, errors, CPU, traces and logs are all normal.",
+ "seed": 2419406818,
+ "tags": {
+  "evidence": [
+   "log-0048739",
+   "log-0048927",
+   "log-0048929"
+  ]
+ },
+ "title": "False alarm (metric glitch)",
+ "total_logs": 50364,
+ "tz_mode": "utc"
+}
