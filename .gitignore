@@ -13,3 +13,6 @@ __pycache__/
 .DS_Store
 /Design spec*.docx
 .env
+.venv/
+node_modules/
+webapp/dist/

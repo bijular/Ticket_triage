@@ -17,6 +17,12 @@ python3 -m triage_eval pg-seed                                    # real disposa
 ```
 Then follow [`docs/operator-guide.md`](docs/operator-guide.md).
 
+**Operator console (optional UI):** `make ui-install ui-build ui` → http://127.0.0.1:8000. A React front end over a FastAPI
+backend that reuses the kit's harness, scorer and aggregator: overview and service health, the 171-run plan, run detail
+(diagnosis with fabricated citations struck through, rubric, activity log, tickets, Postgres statements), new-run with tokens
+and workspace, a per-tool pass/fail report, and a blind-review screen. Reviewers should use `serve-ui --review-only`
+(see the operator guide). Requires Node 20+ and `requirements-web.txt`; localhost only.
+
 ## What is in the box
 | Spec item | Where |
 |---|---|
@@ -31,6 +37,7 @@ Then follow [`docs/operator-guide.md`](docs/operator-guide.md).
 | GitHub, GitHub Actions and Azure DevOps shaped views of the change history; ADO work-item ticket creation | `triage_eval/api/forge.py`, `ticket_server.py` |
 | Sandbox ticketing: dedupe key, rate limits, only write path | `triage_eval/api/ticket_server.py` |
 | Answer keys, stored apart from anything a tool can read | `answer_keys/` (never in `data/`) |
+| Operator console: FastAPI backend + React UI, blind-review-only mode for reviewers | `triage_eval/web/`, `webapp/` |
 | Rubric (6 dimensions, weights), integrity-failure zeroing, thresholds | `config/eval.json`, `triage_eval/score/` |
 | 171-run protocol (72 base + 99 canary), randomised order | `python -m triage_eval plan` → `plan.csv` |
 | Blind review export, drift check (C5), aggregate readout | `blind`, `drift`, `report` |

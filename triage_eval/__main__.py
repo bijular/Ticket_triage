@@ -43,6 +43,11 @@ def main(argv=None):
     d = sub.add_parser("drift", help="C5 instruction-drift check on a run transcript")
     d.add_argument("run_id"); d.add_argument("--dataset", default="c5")
     sub.add_parser("c12", help="build the reviewer rubber-stamping batch (human test)")
+    u = sub.add_parser("serve-ui", help="operator console (FastAPI + React). Needs: pip install -r requirements-web.txt")
+    u.add_argument("--host", default="127.0.0.1"); u.add_argument("--port", type=int, default=8000)
+    u.add_argument("--review-only", action="store_true", help="expose ONLY blind review (for reviewers): no runs, tools, datasets or keys")
+    u.add_argument("--runs-dir", help="read/write runs here instead of ./runs")
+    u.add_argument("--allow-keys", action="store_true", help="let the console show answer keys (only after blind scoring)")
     sub.add_parser("init-env", help="write .env (EVAL_SECRET, container uid/gid) shared by docker compose and the host CLI")
     sub.add_parser("lock", help="hash config/eval.json so threshold edits after the first run are detectable")
     sub.add_parser("verify", help="verify generated data matches the answer keys' manifest hashes + lock file")
@@ -91,6 +96,12 @@ def main(argv=None):
         print(json.dumps(harness.drift_check(a.run_id, a.dataset), indent=1))
     elif a.cmd == "c12":
         print(json.dumps(harness.c12_batch(), indent=1))
+    elif a.cmd == "serve-ui":
+        try:
+            from .web import app as webapp
+        except ImportError as e:
+            raise SystemExit(f"{e}\ninstall the console deps first: python3 -m venv .venv && .venv/bin/pip install -r requirements-web.txt")
+        webapp.serve(a.host, a.port, a.allow_keys, a.runs_dir, a.review_only)
     elif a.cmd == "init-env":
         import os, secrets
         envf = common.ROOT / ".env"
