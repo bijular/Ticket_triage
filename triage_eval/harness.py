@@ -34,7 +34,7 @@ def plan(keys_dir=None, include_optional=False, out=None):
     return rows
 
 
-def new_run(tool, dataset, replicate, model="", model_pinned=False, keys_dir=None, runs_dir=None, ttl=None):
+def new_run(tool, dataset, replicate, model="", model_pinned=False, keys_dir=None, runs_dir=None, ttl=None, with_pg=False):
     """Create a run folder and mint scoped tokens. `dataset` may be a name (inc01, c3, h1) or a ds-id."""
     idx = _index(keys_dir)
     dsid = idx["datasets"].get(dataset, dataset)
@@ -49,9 +49,14 @@ def new_run(tool, dataset, replicate, model="", model_pinned=False, keys_dir=Non
          "model_pinned": model_pinned, "started": prior.get("started", time.time()), "restarts": prior.get("restarts", -1) + 1}
     mf.write_text(json.dumps(m, indent=1))
     ws = make_workspace(run_id, dsid, d.parent.parent / "workspaces")
-    return {"run_id": run_id, "workspace": str(ws),
-            "env": {"TRIAGE_DATA_TOKEN": common.mint_token("read", run_id, dsid, tool, ttl=ttl),
-                    "TRIAGE_TICKET_TOKEN": common.mint_token("tickets", run_id, dsid, tool, ttl=ttl)},
+    env = {"TRIAGE_DATA_TOKEN": common.mint_token("read", run_id, dsid, tool, ttl=ttl),
+           "TRIAGE_TICKET_TOKEN": common.mint_token("tickets", run_id, dsid, tool, ttl=ttl)}
+    if with_pg:
+        from .pg import seed as pgseed
+        env["TRIAGE_PG_URL"] = pgseed.create_run_role(run_id, dsid)
+        m["pg_role"] = pgseed.rolename(run_id)
+        mf.write_text(json.dumps(m, indent=1))
+    return {"run_id": run_id, "workspace": str(ws), "env": env,
             "note": "Re-running the same run_id keeps the same ticket sandbox, so duplicate-ticket behaviour is observable."}
 
 
@@ -77,6 +82,12 @@ def finish_run(run_id, runs_dir=None, **fields):
     m = json.loads((d / "manifest.json").read_text())
     m.update({k: v for k, v in fields.items() if v is not None})
     m["finished"] = time.time()
+    if m.get("pg_role"):
+        from .pg import seed as pgseed
+        try:
+            m["pg_statements_captured"] = pgseed.collect_log(run_id, d / "pg_statements.log")
+        except Exception as e:      # keep the run record even if the log capture fails
+            m["pg_capture_error"] = str(e)[:200]
     ws = d.parent.parent / "workspaces" / run_id
     for f in ("result.json", "transcript.txt", "summary.md"):       # collect the tool's outputs for scoring
         if (ws / f).exists():

@@ -34,6 +34,11 @@ def _secret() -> bytes:
     env = os.environ.get("EVAL_SECRET")
     if env:
         return env.encode()
+    envf = ROOT / ".env"           # written by `init-env`; docker compose reads the same file
+    if envf.exists():
+        for line in envf.read_text().splitlines():
+            if line.startswith("EVAL_SECRET="):
+                return line.split("=", 1)[1].strip().encode()
     p = ROOT / ".secret"
     if not p.exists():
         p.write_text(secrets.token_hex(32))

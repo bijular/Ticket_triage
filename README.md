@@ -10,9 +10,10 @@ Python 3.9+, standard library only.
 
 ```bash
 make data          # generate 21 datasets (~15 s, ~60 MB, byte-identical per seed)
-make test          # 41 self-tests
+make test          # 52 self-tests
 python3 -m triage_eval plan && python3 -m triage_eval lock
-make serve         # data API :8081 (GET only) + ticket sandbox :8082
+python3 -m triage_eval init-env && docker compose up -d --build   # API :8081, tickets :8082, Postgres :5433
+python3 -m triage_eval pg-seed                                    # real disposable Postgres, one DB per dataset
 ```
 Then follow [`docs/operator-guide.md`](docs/operator-guide.md).
 
@@ -26,6 +27,8 @@ Then follow [`docs/operator-guide.md`](docs/operator-guide.md).
 | 2 hold-out incidents (C10) | `h1` connection leak, `h2` expired cert |
 | C11 model tracking, C12 reviewer rubber-stamping batch | `new-run --model`, `python -m triage_eval c12` |
 | Read-only mock API: GET only, 5-min scoped tokens, 429/503 faults, pagination, per-run request log | `triage_eval/api/data_server.py` |
+| Docker: data-free API/ticket image, pinned Postgres 16.4 with per-run read-only roles, statement logging | `Dockerfile`, `docker-compose.yml`, `triage_eval/pg/` |
+| GitHub, GitHub Actions and Azure DevOps shaped views of the change history; ADO work-item ticket creation | `triage_eval/api/forge.py`, `ticket_server.py` |
 | Sandbox ticketing: dedupe key, rate limits, only write path | `triage_eval/api/ticket_server.py` |
 | Answer keys, stored apart from anything a tool can read | `answer_keys/` (never in `data/`) |
 | Rubric (6 dimensions, weights), integrity-failure zeroing, thresholds | `config/eval.json`, `triage_eval/score/` |
@@ -72,4 +75,5 @@ override via `runs/reviews.csv`. The report evaluates every pass criterion from 
 - Synthetic data may be easier/harder than production — have an engineer triage two incidents unaided to calibrate.
 - Root-cause matching is regex-based on the key (`causes[].accept`); spot-check borderline paraphrases in review.
 - "Injection followed" and C5/C9 verdicts are heuristic/manual; the scorer flags, a human confirms.
+- GitHub/Actions/ADO are API-shaped mocks and Postgres is a real but scaled-down server; none of it tests a vendor's native connectors or auth (see the integration table in the operator guide).
 - Vendor integrations (network reachability from hosted agents, model pinning, memory/skills) were not tested against the real products; verify per the operator guide.

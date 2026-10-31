@@ -1,0 +1,52 @@
+# Kit services. Start with:  export EVAL_SECRET=$(openssl rand -hex 32) && docker compose up -d --build
+# Answer keys are never mounted into any container.
+services:
+  api:                      # read-only telemetry replay (+ GitHub / Actions / ADO shaped views)
+    build: .
+    command: ["python", "-m", "triage_eval", "serve-data", "--host", "0.0.0.0", "--port", "8081"]
+    environment:
+      EVAL_SECRET: ${EVAL_SECRET:?export EVAL_SECRET first}
+    volumes:
+      - ./data/replay:/app/data/replay:ro
+      - ./runs:/app/runs
+    ports: ["${TRIAGE_BIND:-127.0.0.1}:8081:8081"]
+    user: "${TRIAGE_UID:-10001}:${TRIAGE_GID:-10001}"   # set to $(id -u):$(id -g) on Linux so ./runs is writable
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8081/v1/health')"]
+      interval: 5s
+      retries: 10
+  tickets:                  # sandbox ticketing (REST + ADO work-item shape); the only write path
+    build: .
+    command: ["python", "-m", "triage_eval", "serve-tickets", "--host", "0.0.0.0", "--port", "8082"]
+    environment:
+      EVAL_SECRET: ${EVAL_SECRET:?export EVAL_SECRET first}
+    volumes:
+      - ./runs:/app/runs
+    ports: ["${TRIAGE_BIND:-127.0.0.1}:8082:8082"]
+    user: "${TRIAGE_UID:-10001}:${TRIAGE_GID:-10001}"   # set to $(id -u):$(id -g) on Linux so ./runs is writable
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8082/v1/health')"]
+      interval: 5s
+      retries: 10
+  postgres:                 # real, disposable PostgreSQL; one DB per dataset, per-run read-only roles
+    image: postgres:16.4
+    environment:
+      POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD:-postgres-admin-not-given-to-tools}
+    command: ["postgres", "-c", "log_statement=all", "-c", "log_connections=on", "-c", "log_line_prefix=%m [%p] %u@%d ",
+              "-c", "max_connections=100", "-c", "shared_buffers=256MB"]
+    ports: ["${TRIAGE_BIND:-127.0.0.1}:${TRIAGE_PG_PORT:-5433}:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 20
+volumes:
+  pgdata:

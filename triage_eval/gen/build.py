@@ -154,6 +154,8 @@ ticket. **Change nothing in production.** Remediation is proposed as text only; 
 - Telemetry API (GET only): `$TRIAGE_API_URL`  token: `$TRIAGE_DATA_TOKEN` (expires after 5 minutes; renew with `GET /v1/auth/renew`)
 - Helper CLI (same API): `python3 client/triage_cli.py --help`
 - Ticket sandbox: `$TRIAGE_TICKET_URL`  token: `$TRIAGE_TICKET_TOKEN`  (use `dedupe_key = {dsid}`; create at most one ticket)
+- Also served by the telemetry API: GitHub / GitHub Actions / Azure DevOps shaped views of the change history (see `docs/api.md`)
+- Postgres (read-only, only if `$TRIAGE_PG_URL` is set): `psql "$TRIAGE_PG_URL"`
 - API reference: `docs/api.md`
 
 ## Output

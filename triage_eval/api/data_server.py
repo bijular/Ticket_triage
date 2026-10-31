@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .. import common
 from ..gen.core import LEVELS
+from . import forge
 from .base import JSONHandler, parse_ts
 
 
@@ -106,6 +107,10 @@ class Handler(JSONHandler):
             if p == rule["path"] and rule["match"].lower() in self.url.query.lower() and srv.rule_hit(run, i, rule.get("times")):
                 self._log_extra = {"injected_fault": rule["status"]}
                 return self._send(rule["status"], rule["body"])
+        if p.startswith(("/github/", "/ado/")):
+            r = forge.handle(rp, p, q)
+            if r:
+                return self._send(*r)
         fn = {"/v1/alert": self.alert, "/v1/services": self.services, "/v1/logs": self.logs,
               "/v1/traces": self.traces, "/v1/metrics": self.metrics, "/v1/metrics/names": self.metric_names,
               "/v1/deploys": self.deploys, "/v1/db/slow-queries": self.slow, "/v1/db/explain": self.explain,

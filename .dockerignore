@@ -1,0 +1,13 @@
+answer_keys/
+data/
+runs/
+workspaces/
+blind/
+c12_batch/
+tests/
+.git/
+.secret
+*.docx
+plan.csv
+report.*
+__pycache__/

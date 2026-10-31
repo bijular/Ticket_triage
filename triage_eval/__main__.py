@@ -26,7 +26,10 @@ def main(argv=None):
     n.add_argument("--tool", required=True, choices=common.CONFIG["tools"])
     n.add_argument("--dataset", required=True, help="name (inc01..inc08, c1..c9, h1, h2) or ds-id")
     n.add_argument("--replicate", type=int, default=1)
+    n.add_argument("--with-pg", action="store_true", help="also create a per-run read-only Postgres role (needs `docker compose up postgres` + pg-seed)")
     n.add_argument("--model", default=""); n.add_argument("--model-pinned", action="store_true")
+    pg = sub.add_parser("pg-seed", help="(re)create and seed the disposable Postgres databases, one per dataset")
+    pg.add_argument("names", nargs="*", help="dataset names (default: all)")
     f = sub.add_parser("finish-run", help="record cost / interventions / model on a run")
     f.add_argument("run_id")
     for k in ("cost-usd", "human-interventions", "prompts-used", "steering-corrections"):
@@ -40,6 +43,7 @@ def main(argv=None):
     d = sub.add_parser("drift", help="C5 instruction-drift check on a run transcript")
     d.add_argument("run_id"); d.add_argument("--dataset", default="c5")
     sub.add_parser("c12", help="build the reviewer rubber-stamping batch (human test)")
+    sub.add_parser("init-env", help="write .env (EVAL_SECRET, container uid/gid) shared by docker compose and the host CLI")
     sub.add_parser("lock", help="hash config/eval.json so threshold edits after the first run are detectable")
     sub.add_parser("verify", help="verify generated data matches the answer keys' manifest hashes + lock file")
     a = ap.parse_args(argv)
@@ -54,9 +58,12 @@ def main(argv=None):
         from .api import ticket_server
         ticket_server.serve(a.host, a.port)
     elif a.cmd == "new-run":
-        out = harness.new_run(a.tool, a.dataset, a.replicate, a.model, a.model_pinned)
+        out = harness.new_run(a.tool, a.dataset, a.replicate, a.model, a.model_pinned, with_pg=a.with_pg)
         print(json.dumps(out, indent=1))
         print("\n# shell exports:\n" + "\n".join(f"export {k}={v}" for k, v in out["env"].items()), file=sys.stderr)
+    elif a.cmd == "pg-seed":
+        from .pg import seed as pgseed
+        pgseed.seed(a.names or None)
     elif a.cmd == "finish-run":
         m = harness.finish_run(a.run_id, cost_usd=a.cost_usd, human_interventions=a.human_interventions,
                                prompts_used=a.prompts_used, steering_corrections=a.steering_corrections,
@@ -84,6 +91,15 @@ def main(argv=None):
         print(json.dumps(harness.drift_check(a.run_id, a.dataset), indent=1))
     elif a.cmd == "c12":
         print(json.dumps(harness.c12_batch(), indent=1))
+    elif a.cmd == "init-env":
+        import os, secrets
+        envf = common.ROOT / ".env"
+        if envf.exists():
+            print(".env already exists; leaving it (delete it to rotate the secret)")
+        else:
+            envf.write_text(f"EVAL_SECRET={secrets.token_hex(32)}\nTRIAGE_UID={os.getuid()}\nTRIAGE_GID={os.getgid()}\n")
+            envf.chmod(0o600)
+            print("wrote .env")
     elif a.cmd == "lock":
         import hashlib
         h = hashlib.sha256((common.ROOT / "config/eval.json").read_bytes()).hexdigest()

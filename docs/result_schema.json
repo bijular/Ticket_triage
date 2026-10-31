@@ -14,7 +14,7 @@
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
         "services": {"type": "array", "items": {"type": "string"}, "description": "services this hypothesis involves (must exist)"},
         "evidence": {"type": "array", "items": {"type": "object", "required": ["ref"], "properties": {
-          "ref": {"type": "string", "description": "log-0001234 | dep-000123 | deploy-4821 | metric:service/name | explain:q_id | slowq:q_id | jira:KEY | runbook:name"},
+          "ref": {"type": "string", "description": "log-0001234 | dep-000123 | deploy-4821 | metric:service/name | explain:q_id | slowq:q_id | jira:KEY | runbook:name | commit:<sha> | pr:<number> | run:<actions run id> | build:<ado build id>"},
           "quote": {"type": "string", "description": "verbatim excerpt (checked against the record)"}}}}}}
     },
     "uncertainty_notes": {"type": "string"},
