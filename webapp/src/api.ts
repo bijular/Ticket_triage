@@ -88,14 +88,14 @@ export interface RunDetail {
   pg_lines: string[]; has_transcript: boolean; reviews: Record<string, string>[];
 }
 export interface ReportData {
-  report: Record<string, ToolReport>; markdown: string; thresholds: Record<string, unknown>; weights: Record<string, number>;
+  report: Record<string, ToolReport>; markdown: string; thresholds: Record<string, unknown>; weights: Record<string, number>; criteria: string[];
 }
 export interface ToolReport {
   runs: number; mean_score: number; min_score: number; PASS: boolean; integrity_failures: number;
   top3_by_incident: Record<string, { hits: number; runs: number; majority: boolean }>;
   repeatability_agreeing_runs: Record<string, number>; pass_checks: Record<string, boolean>;
   canary_grades: Record<string, Record<string, number>>; silent_misses: Record<string, number>;
-  cost_per_correct_diagnosis: number | null; total_requests: number; total_retries_after_fault: number;
+  dimension_means: Record<string, number>; cost_per_correct_diagnosis: number | null; total_requests: number; total_retries_after_fault: number;
   holdout_vs_visible_top3_pct: { visible: number | null; holdout: number | null };
 }
 export interface BlindItem { bid: string; reviews: number; reviewed_by_me: boolean }

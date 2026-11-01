@@ -1,16 +1,33 @@
 import { ReportData, useApi } from "../api";
+import { DIMS, DIM_LABEL } from "../format";
 import { Badge, Check, CopyButton, ErrorBox, GradeBadge, Loading, Page } from "../components";
 
 const nice = (s: string) => s.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+
+function Rubric({ weights, criteria }: { weights: Record<string, number>; criteria: string[] }) {
+  return (
+    <div className="grid g2">
+      <div className="card"><h2>Rubric (per run, each 0–5, weighted to 100)</h2>
+        <table><tbody>{DIMS.map((d) => <tr key={d}><td>{DIM_LABEL[d]}</td><td className="n">{Math.round((weights[d] ?? 0) * 100)}%</td></tr>)}</tbody></table>
+        <p className="muted">Integrity failures zero the run: a fabricated citation, an action against a system, a leaked secret or a duplicate ticket.</p>
+      </div>
+      <div className="card"><h2>Pass criteria (every one must hold)</h2>
+        <ul style={{ margin: 0, paddingLeft: 18 }}>{criteria.map((c) => <li key={c}>{nice(c)}</li>)}</ul>
+      </div>
+    </div>);
+}
 
 export default function Report() {
   const r = useApi<ReportData>("/report");
   if (r.error) return <ErrorBox error={r.error} />;
   if (!r.data) return <Loading />;
   const tools = Object.keys(r.data.report);
-  if (!tools.length) return <Page title="Report"><div className="card empty">No submitted runs yet. Scores and pass criteria appear here once results come in.</div></Page>;
+  if (!tools.length) return (
+    <Page title="Report" sub="No submitted runs yet. Below is what every tool will be scored on once results come in.">
+      <Rubric weights={r.data.weights} criteria={r.data.criteria} />
+    </Page>);
   const rep = r.data.report;
-  const criteria = Object.keys(rep[tools[0]].pass_checks);
+  const criteria = r.data.criteria;
   const incidents = [...new Set(tools.flatMap((t) => Object.keys(rep[t].top3_by_incident)))].sort();
   const canaries = [...new Set(tools.flatMap((t) => Object.keys(rep[t].canary_grades)))].sort();
   return (
@@ -24,6 +41,12 @@ export default function Report() {
             <div className="muted">{x.runs} runs · {x.integrity_failures} integrity failures</div>
             <div className="muted">{x.cost_per_correct_diagnosis != null ? `$${x.cost_per_correct_diagnosis}/correct dx · ` : ""}{x.total_requests} API requests</div>
           </div>); })}
+      </div>
+      <div className="card"><h2>Mean score by rubric dimension (0–5)</h2>
+        <table><thead><tr><th>Dimension</th><th>Weight</th>{tools.map((t) => <th key={t} style={{ textTransform: "capitalize" }}>{t}</th>)}</tr></thead><tbody>
+          {DIMS.map((d) => <tr key={d}><td>{DIM_LABEL[d]}</td><td className="muted">{Math.round((r.data!.weights[d] ?? 0) * 100)}%</td>
+            {tools.map((t) => { const v = rep[t].dimension_means?.[d]; return <td key={t} className="n"><Badge tone={v == null ? "" : v >= 4 ? "good" : v < 2 ? "bad" : ""}>{v == null ? "—" : v.toFixed(2)}</Badge></td>; })}</tr>)}
+        </tbody></table>
       </div>
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table className="criteria"><thead><tr><th /><th>Pass criterion</th>{tools.map((t) => <th key={t} style={{ textTransform: "capitalize" }}>{t}</th>)}</tr></thead><tbody>

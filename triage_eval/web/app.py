@@ -292,7 +292,7 @@ def create_app(runs_dir=None, keys_dir=None, replay_dir=None, plan_csv=None, all
         results = [r for r in (scored(d) for d in run_dirs() if (d / "result.json").exists()) if "error" not in r]
         rep = agg.aggregate(results) if results else {}
         return {"report": rep, "markdown": agg.markdown(rep) if rep else "", "thresholds": common.CONFIG["thresholds"],
-                "weights": common.CONFIG["weights"]}
+                "weights": common.CONFIG["weights"], "criteria": list(agg.CRITERIA)}
 
     # ---- write endpoints -------------------------------------------------------------
     @app.post("/api/runs")
