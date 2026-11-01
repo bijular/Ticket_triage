@@ -29,6 +29,11 @@ def _pct(a, b):
     return round(100 * a / b, 1) if b else None
 
 
+def _mean(vals):
+    vals = [v for v in vals if v is not None]
+    return round(st.mean(vals), 1) if vals else None
+
+
 def aggregate(results):
     th = common.CONFIG["thresholds"]
     tools = defaultdict(list)
@@ -93,6 +98,23 @@ def aggregate(results):
             "holdout_vs_visible_top3_pct": {"visible": vis_rate, "holdout": hold_rate},
             "total_requests": sum(r["requests"]["total"] for r in rs),
             "total_retries_after_fault": sum(r["requests"]["retries_after_fault"] for r in rs),
+            "efficiency": {
+                "mean_api_requests": _mean(r["requests"]["total"] for r in rs),
+                "mean_wall_clock_s": _mean(r.get("wall_clock_s") for r in rs),
+                "mean_repeated_identical_calls": _mean(r["requests"]["max_identical_repeats"] for r in rs),
+            },
+            "oversight": {
+                "mean_human_interventions": _mean(r.get("human_interventions") for r in rs),
+                "mean_prompts_used": _mean(r.get("prompts_used") for r in rs),
+                "mean_steering_corrections": _mean(r.get("steering_corrections") for r in rs),
+                "runs_with_interventions_recorded": sum(1 for r in rs if r.get("human_interventions") is not None),
+            },
+            "fault_recovery": {
+                "faults_injected": sum(r["requests"]["faults_injected"] for r in rs),
+                "faults_recovered": sum(r["requests"]["faults_recovered"] for r in rs),
+                "recovery_rate_pct": _pct(sum(r["requests"]["faults_recovered"] for r in rs),
+                                          sum(r["requests"]["faults_injected"] for r in rs)),
+            },
             "dimension_means": {d: round(st.mean(r["scores"][d] for r in rs), 2) for d in common.CONFIG["weights"]} if rs else {},
             "pass_checks": checks, "PASS": all(checks.values()),
         }
@@ -107,6 +129,15 @@ def markdown(report):
         s = r["silent_misses"]
         out.append(f"| {t} | {r['runs']} | {r['mean_score']} | {r['min_score']} | {r['integrity_failures']} | "
                    f"{s['zero_target(C1,C7,C8)']} \\| {s['others']} | {r['cost_per_correct_diagnosis']} | {'✅' if r['PASS'] else '❌'} |")
+    out.append("\n## Efficiency, recovery and oversight (informational, not pass criteria)\n")
+    out.append("| Tool | Mean API requests | Mean wall-clock s | Fault recovery | Mean interventions | Mean prompts | Mean steering |")
+    out.append("|---|---|---|---|---|---|---|")
+    dash = lambda v: "—" if v is None else v
+    for t, r in report.items():
+        e, o, f = r["efficiency"], r["oversight"], r["fault_recovery"]
+        rec = f"{f['faults_recovered']}/{f['faults_injected']}" if f["faults_injected"] else "—"
+        out.append(f"| {t} | {dash(e['mean_api_requests'])} | {dash(e['mean_wall_clock_s'])} | {rec} | "
+                   f"{dash(o['mean_human_interventions'])} | {dash(o['mean_prompts_used'])} | {dash(o['mean_steering_corrections'])} |")
     out.append("\n## Pass criteria by tool\n")
     names = sorted({k for r in report.values() for k in r["pass_checks"]})
     out.append("| Criterion | " + " | ".join(report) + " |")

@@ -1,4 +1,4 @@
-import { ReportData, useApi } from "../api";
+import { ReportData, ToolReport, useApi } from "../api";
 import { DIMS, DIM_LABEL } from "../format";
 import { Badge, Check, CopyButton, ErrorBox, GradeBadge, Loading, Page } from "../components";
 
@@ -47,6 +47,20 @@ export default function Report() {
           {DIMS.map((d) => <tr key={d}><td>{DIM_LABEL[d]}</td><td className="muted">{Math.round((r.data!.weights[d] ?? 0) * 100)}%</td>
             {tools.map((t) => { const v = rep[t].dimension_means?.[d]; return <td key={t} className="n"><Badge tone={v == null ? "" : v >= 4 ? "good" : v < 2 ? "bad" : ""}>{v == null ? "—" : v.toFixed(2)}</Badge></td>; })}</tr>)}
         </tbody></table>
+      </div>
+      <div className="card"><h2>Efficiency, recovery and oversight</h2>
+        <table><thead><tr><th>Metric</th>{tools.map((t) => <th key={t} style={{ textTransform: "capitalize" }}>{t}</th>)}</tr></thead><tbody>
+          {([
+            ["Mean API requests per run", (x: ToolReport) => x.efficiency?.mean_api_requests],
+            ["Mean wall-clock seconds", (x: ToolReport) => x.efficiency?.mean_wall_clock_s],
+            ["Fault recovery (recovered / injected)", (x: ToolReport) => x.fault_recovery?.faults_injected ? `${x.fault_recovery.faults_recovered}/${x.fault_recovery.faults_injected}` : null],
+            ["Mean human interventions", (x: ToolReport) => x.oversight?.mean_human_interventions],
+            ["Mean prompts used (Cursor)", (x: ToolReport) => x.oversight?.mean_prompts_used],
+            ["Mean steering corrections (Cursor)", (x: ToolReport) => x.oversight?.mean_steering_corrections],
+          ] as [string, (x: ToolReport) => number | string | null | undefined][]).map(([label, f]) =>
+            <tr key={label}><td>{label}</td>{tools.map((t) => { const v = f(rep[t]); return <td key={t} className="n">{v ?? "—"}</td>; })}</tr>)}
+        </tbody></table>
+        <p className="muted" style={{ marginBottom: 0 }}>Informational, not pass criteria. A dash means nothing was recorded (pass the numbers to finish-run). Fault recovery counts injected 429/503 responses that a later retry of the same request got through.</p>
       </div>
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table className="criteria"><thead><tr><th /><th>Pass criterion</th>{tools.map((t) => <th key={t} style={{ textTransform: "capitalize" }}>{t}</th>)}</tr></thead><tbody>

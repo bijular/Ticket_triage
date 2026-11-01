@@ -95,7 +95,10 @@ export interface ToolReport {
   top3_by_incident: Record<string, { hits: number; runs: number; majority: boolean }>;
   repeatability_agreeing_runs: Record<string, number>; pass_checks: Record<string, boolean>;
   canary_grades: Record<string, Record<string, number>>; silent_misses: Record<string, number>;
-  dimension_means: Record<string, number>; cost_per_correct_diagnosis: number | null; total_requests: number; total_retries_after_fault: number;
+  dimension_means: Record<string, number>;
+  efficiency: { mean_api_requests: number | null; mean_wall_clock_s: number | null; mean_repeated_identical_calls: number | null };
+  oversight: { mean_human_interventions: number | null; mean_prompts_used: number | null; mean_steering_corrections: number | null; runs_with_interventions_recorded: number };
+  fault_recovery: { faults_injected: number; faults_recovered: number; recovery_rate_pct: number | null }; cost_per_correct_diagnosis: number | null; total_requests: number; total_retries_after_fault: number;
   holdout_vs_visible_top3_pct: { visible: number | null; holdout: number | null };
 }
 export interface BlindItem { bid: string; reviews: number; reviewed_by_me: boolean }

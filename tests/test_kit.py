@@ -437,6 +437,7 @@ class Scoring(unittest.TestCase):
         p.write_text("\n".join(json.dumps(r) for r in reqs))
         a = score.analyse_requests(p)
         self.assertEqual((a["retries_after_fault"], a["max_identical_repeats"]), (1, 3))
+        self.assertEqual((a["faults_injected"], a["faults_recovered"]), (1, 1))
 
     def test_review_overrides_and_aggregate(self):
         make_run("inc01", "factory", 5, good_result("inc01", "OCR pool config change", "deploy-4821 max_connections 4"), tickets=[TICKET])
@@ -453,6 +454,9 @@ class Scoring(unittest.TestCase):
         self.assertIn("factory", rep)
         self.assertIn("| factory |", aggregate.markdown(rep))
         self.assertFalse(rep["factory"]["PASS"])
+        self.assertIn("efficiency", rep["factory"])
+        self.assertIn("recovery_rate_pct", rep["factory"]["fault_recovery"])
+        self.assertIn("Efficiency, recovery and oversight", aggregate.markdown(rep))
 
 
 class Harness(unittest.TestCase):

@@ -115,7 +115,8 @@ def check_citations(result, ix):
 
 
 def analyse_requests(path):
-    out = dict(total=0, writes=0, retries_after_fault=0, max_identical_repeats=0, pages_followed=0, services_queried=[])
+    out = dict(total=0, writes=0, retries_after_fault=0, max_identical_repeats=0, pages_followed=0, services_queried=[],
+               faults_injected=0, faults_recovered=0)
     p = Path(path)
     if not p.exists():
         return out
@@ -129,7 +130,10 @@ def analyse_requests(path):
         if key in last_fault:
             out["retries_after_fault"] += 1
             last_fault.discard(key)
+            if r["status"] < 400:
+                out["faults_recovered"] += 1
         if r["status"] in (429, 503, 500) and r.get("injected_fault"):
+            out["faults_injected"] += 1
             last_fault.add(key)
         streak = streak + 1 if key == prev else 1
         out["max_identical_repeats"] = max(out["max_identical_repeats"], streak)
